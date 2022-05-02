@@ -8,6 +8,7 @@ import datetime as dt
 import openpyxl
 import matplotlib.pyplot as plt
 import math
+import requests
 
 # Week of Rankings
 week = 5
@@ -42,7 +43,13 @@ else:
 
         sheet = "Week_" + str(j)
         # Import data from NCAA Nitty Gritties website
-        weekly_data = pd.read_excel('/Users/jakegrant/PycharmProjects/ACCTitles/NCAA_Softball_Selection_Data.xlsx',sheet_name=sheet,engine='openpyxl')
+        r = requests.get('https://stats.ncaa.org/selection_rankings/nitty_gritties/26243', headers={
+            'Cookie': 'AKA_A2=A; X-Oracle-BMC-LBS-Route=e0e8f5ccc6c39fedaa6765ef3ac329941e557d93; _stats_session=BAh7B0kiD3Nlc3Npb25faWQGOgZFVEkiJTBmMWZiOGEyODhlZTEwNjgyNzdmNTAwOTk1OTVlZjEwBjsAVEkiEF9jc3JmX3Rva2VuBjsARkkiMTNzdVQrMVd3Sk16Mm04cGtBMkN5cE05QlVlb3ZVajhLL1d6TWcxcElFSWM9BjsARg%3D%3D--9481177a9fd3a9953a55baa1526f3e0e27c42ee5',
+            'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15'
+        })
+        scraped_data = pd.read_html(r.text, attrs={'id':'selection_rankings_nitty_gritty_data_table'})
+        # print(scraped_data[0])
+        weekly_data = scraped_data[0]
 
         # Calculate Win Percentage
         try:
@@ -110,15 +117,23 @@ else:
         except KeyError:
             weekly_data['Below150%'] = weekly_data['vs below 150'].str.split('-', expand=True)[0].astype(int) / (weekly_data['vs below 150'].str.split('-', expand=True)[0].astype(int) + weekly_data['vs below 150'].str.split('-', expand=True)[1].astype(int))
 
+        # clean up the data set    
+        valid_cols = []
+        # print(weekly_data.columns)
+        for col in weekly_data.columns:
+            if ('Result' not in col) and ('Wins' not in col):
+                valid_cols.append(col)
+
+        weekly_vals = weekly_data.loc[:, valid_cols]
         # Calculate jRPI and Rank
-        weekly_vals = weekly_data.drop(['Team','Conference','SOS','Prev SOS','Adj. RPI','RPI','WL','Adj. Non-Conf RPI','Non-Conf Record','Conf RPI','Conf. Record','Road WL','Last 10 Games','RPI 1-25','RPI 26-50','RPI 51-100','RPI 101+','vs TOP 100','vs below 150','NC SOS'],axis=1).fillna(0)
+        weekly_vals = weekly_vals.drop(['Team','Conference','SOS','Prev SOS','Adj. RPI','RPI','WL','Adj. Non-Conf RPI','Non-Conf Record','Conf RPI','Conf. Record','Road WL','Last 10 Games','RPI 1-25','RPI 26-50','RPI 51-100','RPI 101+','vs TOP 100','vs below 150','NC SOS'],axis=1).fillna(0)
         weekly_jrpi = pd.DataFrame(weekly_vals.dot(weights), columns={'jRPI'})
         weekly_jrpi['Team'] = weekly_data['Team']
         weekly_jrpi['Conference'] = weekly_data['Conference']
         column_names = ['Team', 'Conference', 'jRPI']
         weekly_jrpi = weekly_jrpi.reindex(columns=column_names)
         weekly_jrpi['Rank'] = weekly_jrpi['jRPI'].rank(ascending=False)
-        weekly_jrpi = weekly_jrpi.sort_values(by=['Rank']).reset_index(drop=True)
+        weekly_jrpi = weekly_jrpi.sort_values(by=['Rank'])
 
         # Find Autobids
         autos = weekly_jrpi.sort_values('Rank').groupby('Conference', as_index=False).first()['Team']
