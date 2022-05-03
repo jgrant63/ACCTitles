@@ -6,12 +6,13 @@ import sys
 import numpy as np
 import datetime as dt
 import openpyxl
+from openpyxl import load_workbook
 import matplotlib.pyplot as plt
 import math
 import requests
 
 # Week of Rankings
-week = 5
+week = 6
 
 # Specify weights for input parameters. Values must sum to 1
 w_adj_rpi = 0.5
@@ -29,27 +30,48 @@ w_top100 = 0.025
 w_bot150 = 0
 
 weights = pd.Series([w_adj_rpi, w_rpi, w_wl, w_non_con, w_con, w_road, w_last10, w_rpi25, w_rpi50, w_rpi100, w_rpi101, w_top100, w_bot150],index=['Adj. RPI Value','RPI Value','WL%','Non-Conf%','Conf%','Road WL%','Last 10%','RPI25%','RPI50%','RPI100%','RPI101+%','Top100%','Below150%'])
+excel_path = '/Users/jakegrant/PycharmProjects/ACCTitles/NCAA_Softball_Selection_Data.xlsx'
+
+# load up the excel sheet of existing data
+base_book = load_workbook(excel_path)
+data_writer = pd.ExcelWriter(excel_path, engine = 'openpyxl')
+data_writer.book = base_book
 
 if weights.sum() != 1:
     out_str = "ERROR CODE 1: Weights equal %f. Enter values that equal 1." %weights.sum()
     print(out_str)
     sys.exit()
-else:
+else:    
+    # Import data from NCAA Nitty Gritties website
+    r = requests.get('https://stats.ncaa.org/selection_rankings/nitty_gritties/26243', headers={
+        'Cookie': 'AKA_A2=A; X-Oracle-BMC-LBS-Route=e0e8f5ccc6c39fedaa6765ef3ac329941e557d93; _stats_session=BAh7B0kiD3Nlc3Npb25faWQGOgZFVEkiJTBmMWZiOGEyODhlZTEwNjgyNzdmNTAwOTk1OTVlZjEwBjsAVEkiEF9jc3JmX3Rva2VuBjsARkkiMTNzdVQrMVd3Sk16Mm04cGtBMkN5cE05QlVlb3ZVajhLL1d6TWcxcElFSWM9BjsARg%3D%3D--9481177a9fd3a9953a55baa1526f3e0e27c42ee5',
+        'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15'
+    })
+    scraped_data = pd.read_html(r.text, attrs={'id':'selection_rankings_nitty_gritty_data_table'})
+    
+    # clean up the data by removing the bad columns from the HTML (ex: 04/28/2022 Result and Wins.1)
+    valid_cols = []
+    # print(scraped_week.columns)
+    for col in scraped_week.columns:
+        if ('Result' not in col) and ('Wins' not in col):
+            valid_cols.append(col)
 
+    scraped_vals = scraped_week.loc[:, valid_cols]
+
+    # write the imported data to the excel sheet
+    scraped_vals.to_excel(data_writer, sheet_name = f'Week_{week}')
+    data_writer.save()
+    data_writer.close()
+
+    # kick off the processing code
     d_season_jrpi = {}
     d_season_regs = {}
     last_in = {}
     for j in range(1,week+1):
 
         sheet = "Week_" + str(j)
-        # Import data from NCAA Nitty Gritties website
-        r = requests.get('https://stats.ncaa.org/selection_rankings/nitty_gritties/26243', headers={
-            'Cookie': 'AKA_A2=A; X-Oracle-BMC-LBS-Route=e0e8f5ccc6c39fedaa6765ef3ac329941e557d93; _stats_session=BAh7B0kiD3Nlc3Npb25faWQGOgZFVEkiJTBmMWZiOGEyODhlZTEwNjgyNzdmNTAwOTk1OTVlZjEwBjsAVEkiEF9jc3JmX3Rva2VuBjsARkkiMTNzdVQrMVd3Sk16Mm04cGtBMkN5cE05QlVlb3ZVajhLL1d6TWcxcElFSWM9BjsARg%3D%3D--9481177a9fd3a9953a55baa1526f3e0e27c42ee5',
-            'User-Agent' : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15'
-        })
-        scraped_data = pd.read_html(r.text, attrs={'id':'selection_rankings_nitty_gritty_data_table'})
-        # print(scraped_data[0])
-        weekly_data = scraped_data[0]
+
+        weekly_data = pd.read_excel(excel_path,sheet_name=sheet,engine='openpyxl')
 
         # Calculate Win Percentage
         try:
