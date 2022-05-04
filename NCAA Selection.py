@@ -32,12 +32,6 @@ w_bot150 = 0
 weights = pd.Series([w_adj_rpi, w_rpi, w_wl, w_non_con, w_con, w_road, w_last10, w_rpi25, w_rpi50, w_rpi100, w_rpi101, w_top100, w_bot150],index=['Adj. RPI Value','RPI Value','WL%','Non-Conf%','Conf%','Road WL%','Last 10%','RPI25%','RPI50%','RPI100%','RPI101+%','Top100%','Below150%'])
 excel_path = '/Users/jakegrant/PycharmProjects/ACCTitles/NCAA_Softball_Selection_Data.xlsx'
 
-# load up the excel sheet of existing data
-#base_book = load_workbook(excel_path)
-#data_writer = pd.ExcelWriter(excel_path,engine='openpyxl',mode='a')
-#data_writer.book = base_book
-
-
 if weights.sum() != 1:
     out_str = "ERROR CODE 1: Weights equal %f. Enter values that equal 1." %weights.sum()
     print(out_str)
@@ -56,7 +50,6 @@ else:
     for col in scraped_week.columns:
         if ('Result' not in col) and ('Wins' not in col):
             valid_cols.append(col)
-
 
     scraped_vals = scraped_week.loc[:, valid_cols]
 
@@ -327,11 +320,44 @@ else:
     # NEXT: ACC TEAM PLOT (WITH COLOR?)
 
 
+
+
+    # Find Bubble Teams
+    teams = weekly_jrpi['Team']
+    teams = teams[~teams.isin(at_larges)]
+    teams = teams[~teams.isin(autos)]
+
+    # First Four Out
+    first_four_out = teams[0:4].reset_index()
+    first_four_out = first_four_out[['Team', 'index']]
+    first_four_out['index'] = first_four_out['index'] + 1
+
+    # Next Four Out
+    next_four_out = teams[4:8].reset_index()
+    next_four_out = next_four_out[['Team', 'index']]
+    next_four_out['index'] = next_four_out['index'] + 1
+
+    # Last Four In
+    last_four_in = at_larges.iloc[-4:]
+    last_four_in = last_four_in.iloc[::-1].reset_index()
+    last_four_in = last_four_in[['Team', 'index']]
+    last_four_in['index'] = last_four_in['index'] + 1
+
+    # Next Four In
+    next_four_in = at_larges.iloc[-8:-4]
+    next_four_in = next_four_in.iloc[::-1].reset_index()
+    next_four_in = next_four_in[['Team', 'index']]
+    next_four_in['index'] = next_four_in['index'] + 1
+
+    bubble = pd.concat([first_four_out, next_four_out, last_four_in, next_four_in],axis=1)
+    bubble.columns = ['First Four Out', 'Rank', 'Next Four Out', 'Rank', 'Last Four In', 'Rank', 'Next Four In', 'Rank']
+
     # Writer Outputs to Excel
     tourney_projection = pd.concat(d_regs)
     out_xls_name = 'Week_' + str(week) + '_Tourney_Prediction.xlsx'
     with pd.ExcelWriter(out_xls_name) as writer:
         tourney_projection.to_excel(writer, sheet_name='Projected Field')
+        bubble.to_excel(writer,sheet_name='Bubble Teams')
         blank = pd.DataFrame()
         blank.to_excel(writer, sheet_name='jRPI Plot')
         blank.to_excel(writer, sheet_name='Rank Plot')
@@ -368,5 +394,4 @@ else:
 # Plot jRPI vs RPI, WL%, etc.
 # plot of teams in vs. out (like show which ones have been in the whole team vs. not? idk
 # ACC plots
-# last four in, first four out
 
