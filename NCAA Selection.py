@@ -71,12 +71,12 @@ else:
     d_season_jrpi = {}
     d_season_regs = {}
     last_in = {}
-    for j in range(week,week+1):
+    for j in range(1,week+1):
 
         sheet = "Week_" + str(j)
         # Import data from NCAA Nitty Gritties website
         weekly_data = pd.read_excel(excel_path, sheet_name=sheet,engine='openpyxl')
-        weekly_data = weekly_data.iloc[:, 1:]
+        weekly_data = weekly_data.loc[:, ~weekly_data.columns.str.contains('^Unnamed')]
 
         # Calculate Win Percentage
         try:
@@ -160,7 +160,7 @@ else:
         column_names = ['Team', 'Conference', 'jRPI']
         weekly_jrpi = weekly_jrpi.reindex(columns=column_names)
         weekly_jrpi['Rank'] = weekly_jrpi['jRPI'].rank(ascending=False)
-        weekly_jrpi = weekly_jrpi.sort_values(by=['Rank'])
+        weekly_jrpi = weekly_jrpi.sort_values(by=['Rank']).reset_index(drop=True)
 
         # Find Autobids
         autos = weekly_jrpi.sort_values('Rank').groupby('Conference', as_index=False).first()['Team']
