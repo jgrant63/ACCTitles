@@ -15,21 +15,21 @@ import requests
 week = 9
 
 # Specify weights for input parameters. Values must sum to 1
-w_adj_rpi = 0.5
+w_adj_rpi = 0.625
 w_wl = 0
 w_non_con = 0.05
 w_con = 0.05
 w_road = 0
-w_last10 = 0.025
-w_rpi25 = 0.1
-w_rpi50 = 0.1
-w_rpi100 = 0.075
-w_rpi101 = 0.075
+#w_last10 = 0.025
+w_rpi25 = 0.1 #w_rpi25 = 0.1
+w_rpi50 = 0.075
+w_rpi100 = 0.05
+w_rpi101 = 0.025
 w_top100 = 0.025
 w_bot150 = 0
 
-weights = pd.Series([w_adj_rpi, w_wl, w_non_con, w_con, w_road, w_last10, w_rpi25, w_rpi50, w_rpi100, w_rpi101, w_top100, w_bot150],index=['Adj. RPI Value','WL%','Non-Conf%','Conf%','Road WL%','Last 10%','RPI25%','RPI50%','RPI100%','RPI101+%','Top100%','Below150%'])
-excel_path = '/Users/jakegrant/PycharmProjects/ACCTitles/NCAA_Softball_Selection_Data.xlsx'
+weights = pd.Series([w_adj_rpi, w_wl, w_non_con, w_con, w_road, w_rpi25, w_rpi50, w_rpi100, w_rpi101, w_top100, w_bot150],index=['Adj. RPI Value','WL%','Non-Conf%','Conf%','Road WL%','RPI25%','RPI50%','RPI100%','RPI101+%','Top100%','Below150%'])
+excel_path = '/Users/jakegrant/PycharmProjects/ACCTitles/NCAA_Baseball_Selection_Data.xlsx'
 
 if round(weights.sum(),4) != 1.0000:
     out_str = "ERROR CODE 1: Weights equal %f. Enter values that equal 1." %weights.sum()
@@ -37,7 +37,7 @@ if round(weights.sum(),4) != 1.0000:
     sys.exit()
 else:
     # Import data from NCAA Nitty Gritties website
-    r = requests.get('https://stats.ncaa.org/selection_rankings/nitty_gritties/26243', headers={
+    r = requests.get('https://stats.ncaa.org/selection_rankings/nitty_gritties/26323', headers={
         'Cookie': 'AKA_A2=A; X-Oracle-BMC-LBS-Route=e0e8f5ccc6c39fedaa6765ef3ac329941e557d93; _stats_session=BAh7B0kiD3Nlc3Npb25faWQGOgZFVEkiJTBmMWZiOGEyODhlZTEwNjgyNzdmNTAwOTk1OTVlZjEwBjsAVEkiEF9jc3JmX3Rva2VuBjsARkkiMTNzdVQrMVd3Sk16Mm04cGtBMkN5cE05QlVlb3ZVajhLL1d6TWcxcElFSWM9BjsARg%3D%3D--9481177a9fd3a9953a55baa1526f3e0e27c42ee5',
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15'
     })
@@ -98,10 +98,10 @@ else:
             weekly_data['Road WL%'] = weekly_data['Road WL'].str.split('-', expand=True)[0].astype(int) / (weekly_data['Road WL'].str.split('-', expand=True)[0].astype(int) + weekly_data['Road WL'].str.split('-', expand=True)[1].astype(int))
 
         # Calculate Last 10 Games Win Percentage
-        try:
-            weekly_data['Last 10%'] = (weekly_data['Last 10 Games'].str.split('-', expand=True)[0].astype(int) + .5*weekly_data['Last 10 Games'].str.split('-', expand=True)[2].fillna(0).astype(int))/(weekly_data['Last 10 Games'].str.split('-', expand=True)[0].astype(int) + weekly_data['Last 10 Games'].str.split('-', expand=True)[1].astype(int) + weekly_data['Last 10 Games'].str.split('-', expand=True)[2].fillna(0).astype(int))
-        except KeyError:
-            weekly_data['Last 10%'] = weekly_data['Last 10 Games'].str.split('-', expand=True)[0].astype(int) / (weekly_data['Last 10 Games'].str.split('-', expand=True)[0].astype(int) + weekly_data['Last 10 Games'].str.split('-', expand=True)[1].astype(int))
+        #try:
+        #    weekly_data['Last 10%'] = (weekly_data['Last 10 Games'].str.split('-', expand=True)[0].astype(int) + .5*weekly_data['Last 10 Games'].str.split('-', expand=True)[2].fillna(0).astype(int))/(weekly_data['Last 10 Games'].str.split('-', expand=True)[0].astype(int) + weekly_data['Last 10 Games'].str.split('-', expand=True)[1].astype(int) + weekly_data['Last 10 Games'].str.split('-', expand=True)[2].fillna(0).astype(int))
+        #except KeyError:
+        #    weekly_data['Last 10%'] = weekly_data['Last 10 Games'].str.split('-', expand=True)[0].astype(int) / (weekly_data['Last 10 Games'].str.split('-', expand=True)[0].astype(int) + weekly_data['Last 10 Games'].str.split('-', expand=True)[1].astype(int))
 
         # Calculate Win Percentage vs. Top 25 RPI Teams
         try:
@@ -139,7 +139,7 @@ else:
         except KeyError:
             weekly_data['Below150%'] = weekly_data['vs below 150'].str.split('-', expand=True)[0].astype(int) / (weekly_data['vs below 150'].str.split('-', expand=True)[0].astype(int) + weekly_data['vs below 150'].str.split('-', expand=True)[1].astype(int))
 
-        # clean up the data set    
+        # clean up the data set
         valid_cols = []
         # print(weekly_data.columns)
         for col in weekly_data.columns:
@@ -148,7 +148,7 @@ else:
 
         weekly_vals = weekly_data.loc[:, valid_cols]
         # Calculate jRPI and Rank
-        weekly_vals = weekly_vals.drop(['Team','Conference','SOS','Prev SOS','Adj. RPI','RPI','RPI Value','Orig. RPI Value','WL','Adj. Non-Conf RPI','Non-Conf Record','Conf RPI','Conf. Record','Road WL','Last 10 Games','RPI 1-25','RPI 26-50','RPI 51-100','RPI 101+','vs TOP 100','vs below 150','NC SOS'],axis=1,errors='ignore').fillna(0)
+        weekly_vals = weekly_vals.drop(['Team','Conference','SOS','Prev SOS','Prev Adj. RPI','Adj. RPI','RPI','RPI Value','Orig RPI Value','WL','Adj. Non-Conf RPI','Non-Conf Record','Conf RPI','Conf. Record','Road WL','Last 10 Games','RPI 1-25','RPI 26-50','RPI 51-100','RPI 101+','vs TOP 100','vs below 150','NC SOS'],axis=1,errors='ignore').fillna(0)
         weekly_jrpi = pd.DataFrame(weekly_vals.dot(weights), columns={'jRPI'})
         weekly_jrpi['Team'] = weekly_data['Team']
         weekly_jrpi['Conference'] = weekly_data['Conference']
@@ -163,7 +163,7 @@ else:
 
         # Find At Larges
         weekly_jrpi['At Large'] = weekly_jrpi.loc[weekly_jrpi['Autos'] == False, 'Rank']
-        at_larges = weekly_jrpi.nsmallest(32, 'At Large', keep='first')['Team']
+        at_larges = weekly_jrpi.nsmallest(33, 'At Large', keep='first')['Team']
         last_in["last_{0}".format(j)] = at_larges.index[-1]
         weekly_jrpi['At Large'] = weekly_jrpi['Team'].isin(at_larges)
 
@@ -249,10 +249,10 @@ else:
     plt.plot(season_jrpis.T['Georgia Tech'], marker='', color='#b3a369', linewidth=4, alpha=0.7)
     plt.ylim(bottom=0)
     plt.ylabel('USI Rating')
-    plt.title('Weekly Change in Softball USI Rating')
+    plt.title('Weekly Change in Baseball USI Rating')
     plt.text(1, -0.1, 'Jake Grant, 2022', horizontalalignment='right',
              verticalalignment='center', transform=ax.transAxes)
-    jRPI_fig = 'softball_usi_plot.png'
+    jRPI_fig = 'baseball_usi_plot.png'
     plt.savefig(jRPI_fig,dpi=my_dpi)
     #plt.show()
 
@@ -267,10 +267,10 @@ else:
     plt.ylim(bottom=0)
     plt.gca().invert_yaxis()
     plt.ylabel('USI Ranking')
-    plt.title('Weekly Change in Softball USI Ranking')
+    plt.title('Weekly Change in Baseball USI Ranking')
     plt.text(1, -0.1, 'Jake Grant, 2022', horizontalalignment='right',
              verticalalignment='center', transform=ax.transAxes)
-    rank_fig = 'softball_rank_plot.png'
+    rank_fig = 'baseball_rank_plot.png'
     plt.savefig(rank_fig,dpi=my_dpi)
     #plt.show()
 
@@ -288,10 +288,10 @@ else:
         print('ERROR CODE 3: Tech not in tournament field. Code will proceed.')
     plt.ylim(bottom=0)
     plt.ylabel('USI Rating')
-    plt.title('Weekly Change in Softball USI Rating for Tournament Teams')
+    plt.title('Weekly Change in Baseball USI Rating for Tournament Teams')
     plt.text(1, -0.1, 'Jake Grant, 2022', horizontalalignment='right',
              verticalalignment='center', transform=ax.transAxes)
-    jRPI_fig = 'softball_usi_field_plot.png'
+    jRPI_fig = 'baseball_usi_field_plot.png'
     plt.savefig(jRPI_fig, dpi=my_dpi)
     #plt.show()
 
@@ -312,10 +312,10 @@ else:
     plt.ylim(bottom=0)
     plt.gca().invert_yaxis()
     plt.ylabel('USI Ranking')
-    plt.title('Weekly Change in Softball USI Ranking for Tournament Teams')
+    plt.title('Weekly Change in Baseball USI Ranking for Tournament Teams')
     plt.text(1, -0.1, 'Jake Grant, 2022', horizontalalignment='right',
              verticalalignment='center', transform=ax.transAxes)
-    rank_fig = 'softball_rank_field_plot.png'
+    rank_fig = 'baseball_rank_field_plot.png'
     plt.savefig(rank_fig, dpi=my_dpi)
     #plt.show()
 
@@ -356,7 +356,7 @@ else:
 
     # Writer Outputs to Excel
     tourney_projection = pd.concat(d_regs)
-    out_xls_name = 'Week_' + str(week) + '_Softball_Tourney_Prediction.xlsx'
+    out_xls_name = 'Week_' + str(week) + '_Baseball_Tourney_Prediction.xlsx'
     with pd.ExcelWriter(out_xls_name) as writer:
         tourney_projection.to_excel(writer, sheet_name='Projected Field')
         bubble.to_excel(writer,sheet_name='Bubble Teams')
