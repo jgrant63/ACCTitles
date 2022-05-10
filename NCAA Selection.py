@@ -12,19 +12,19 @@ import math
 import requests
 
 # Week of Rankings
-week = 9
+week = 10
 
 # Specify weights for input parameters. Values must sum to 1
-w_adj_rpi = 0.5
+w_adj_rpi = 0.525
 w_wl = 0
 w_non_con = 0.05
 w_con = 0.05
 w_road = 0
-w_last10 = 0.025
-w_rpi25 = 0.1
+w_last10 = 0 #would replace .025 from aRPI but baseball doesn't have last10
+w_rpi25 = 0.125
 w_rpi50 = 0.1
 w_rpi100 = 0.075
-w_rpi101 = 0.075
+w_rpi101 = 0.05
 w_top100 = 0.025
 w_bot150 = 0
 
@@ -37,7 +37,7 @@ if round(weights.sum(),4) != 1.0000:
     sys.exit()
 else:
     # Import data from NCAA Nitty Gritties website
-    r = requests.get('https://stats.ncaa.org/selection_rankings/nitty_gritties/26243', headers={
+    r = requests.get('https://stats.ncaa.org/selection_rankings/nitty_gritties/26626', headers={
         'Cookie': 'AKA_A2=A; X-Oracle-BMC-LBS-Route=e0e8f5ccc6c39fedaa6765ef3ac329941e557d93; _stats_session=BAh7B0kiD3Nlc3Npb25faWQGOgZFVEkiJTBmMWZiOGEyODhlZTEwNjgyNzdmNTAwOTk1OTVlZjEwBjsAVEkiEF9jc3JmX3Rva2VuBjsARkkiMTNzdVQrMVd3Sk16Mm04cGtBMkN5cE05QlVlb3ZVajhLL1d6TWcxcElFSWM9BjsARg%3D%3D--9481177a9fd3a9953a55baa1526f3e0e27c42ee5',
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15'
     })
@@ -148,7 +148,7 @@ else:
 
         weekly_vals = weekly_data.loc[:, valid_cols]
         # Calculate jRPI and Rank
-        weekly_vals = weekly_vals.drop(['Team','Conference','SOS','Prev SOS','Adj. RPI','RPI','RPI Value','Orig. RPI Value','WL','Adj. Non-Conf RPI','Non-Conf Record','Conf RPI','Conf. Record','Road WL','Last 10 Games','RPI 1-25','RPI 26-50','RPI 51-100','RPI 101+','vs TOP 100','vs below 150','NC SOS'],axis=1,errors='ignore').fillna(0)
+        weekly_vals = weekly_vals.drop(['Team','Conference','SOS','Prev SOS','Adj. RPI','RPI','RPI Value','Orig. RPI Value','WL','Adj. Non-Conf RPI','Non-Conf Record','Conf RPI','Conf. Record','Road WL','Last 10 Games','RPI 1-25','RPI 26-50','RPI 51-100','RPI 101+','vs TOP 100','vs below 150','NC SOS','NC SOS Value'],axis=1,errors='ignore').fillna(0)
         weekly_jrpi = pd.DataFrame(weekly_vals.dot(weights), columns={'jRPI'})
         weekly_jrpi['Team'] = weekly_data['Team']
         weekly_jrpi['Conference'] = weekly_data['Conference']
@@ -232,8 +232,8 @@ else:
     for key in d_season_jrpi:
         k += 1
         jrpi_rank = d_season_jrpi[key].drop(['Conference','Autos','At Large','Field'],axis=1)
-        season_jrpis['Week {}'.format(k)] = jrpi_rank['jRPI']
-        season_ranks['Week {}'.format(k)] = jrpi_rank['Rank']
+        season_jrpis['Wk {}'.format(k)] = jrpi_rank['jRPI']
+        season_ranks['Wk {}'.format(k)] = jrpi_rank['Rank']
 
     field_jrpis = season_jrpis[season_jrpis.index.isin(tourney_field['Team'])]
     field_ranks = season_ranks[season_ranks.index.isin(tourney_field['Team'])]
